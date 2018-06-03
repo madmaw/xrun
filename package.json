@@ -1,0 +1,28 @@
+{
+  "name": "artest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/madmaw/xrun.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/madmaw/xrun/issues"
+  },
+  "scripts": {
+    "build": "webpack",
+    "serve": "webpack-dev-server -d --open"
+  },
+  "homepage": "https://github.com/madmaw/xrun#readme",
+  "devDependencies": {
+    "ts-loader": "^3.3.1",
+    "typescript": "^2.6.2",
+    "webpack": "^3.10.0",
+    "webpack-dev-server": "^2.11.1"
+  },
+  "dependencies": {
+  }
+}
