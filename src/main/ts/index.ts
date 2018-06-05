@@ -1,129 +1,93 @@
 interface Frame {
-    tracks: number[];
-    shapes: number[];
-    cx: number;
-    cy: number;    
+    land: number[];
 }
 
-let frameBufferSize = 102;
+let frameBufferSize = 30;
 
+//let land = [0, 0, .4, .4, 0, -.1, -.1, 0, 0, 0, .2, .2];
+//let land = [1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+let land: number[] = [];
+for( let i=0; i<100; i++ ) {
+    land.push(2);
+}
+let landLength = land.length;
 let frameBuffer = new Array<Frame>(frameBufferSize);
 frameBuffer[0] = {
-    tracks: [],
-    shapes: [],
-    cx: 0, 
-    cy: 0
+    land: land,
 };
 
-let speed = .01;
+let vz = .004;
 let frameBufferIndex = 0;
-let z = frameBufferSize - 1;
-let dy = 0;
+let x = 0;
+let vx = 0;
+let y = 0;
 let vy = 0;
-let f;
-let prev: number;
-let targetRotation = 0;
 let rotation = 0;
+let targetRotation = 0;
+let z = frameBufferSize - 1;
+let f: any = 0;
+let prev = 0;
+let diff = 0;
 
-c.textAlign = 'center';
+let keys: {[_:number]: number} = {};
 
-window.onkeydown = (e: KeyboardEvent) => {
-    let keyCode = e.keyCode;
-    if( keyCode == 39 ) {
-        // right
-        targetRotation += Math.PI/2;
-    } else if( keyCode == 37 ) {
-        // left
-        targetRotation -= Math.PI/2;
-    } else {
-        if( dy == 0 ) {
-            vy = .4;
-        }
-    }
+onkeydown = (e: KeyboardEvent) => {
+   keys[e.keyCode] = 1;
+}
+
+onkeyup = (e: KeyboardEvent) => {
+    keys[e.keyCode] = 0;
 }
 
 (f = ((now?: number)=> {
 
     if( prev ) {
-        let diff = now - prev;
-        z += diff * speed;
-        rotation = rotation + (targetRotation - rotation) * Math.min(1, diff/100);
-        vy -= diff * .001;
-        dy += vy;
-        if( dy < 0 ) {
-            vy = 0;
-            dy = 0;
+        diff = now - prev;
+        let d = diff * .00003;
+        if( keys[39] ) {
+            vx += d;
+        } else if( keys[37] ) {
+            vx -= d;
+        } else {
+            if( vx > 0 ) {
+                vx -= d;
+                vx = Math.max(0, vx);
+            } else {
+                vx += d;
+                vx = Math.min(0, vx);
+            }
         }
+        vx = Math.max(-.005, Math.min(.005, vx));
+        let evx = vx / (y * Math.PI * 2);
+        x += evx * Math.cos(targetRotation);
+        if ( x < 0 ) {
+            x++;
+        }
+        y += diff * (vy + evx * Math.sin(targetRotation));
+        z += diff * vz;
+
+        rotation = rotation + (targetRotation - rotation) * Math.min(1, diff/500);
     }
     prev = now;
 
     // populate frames
     let zi = Math.floor(z);
-    let Z = zi % frameBufferSize;
-    while( frameBufferIndex != Z ) {
-        let previousFrame = frameBuffer[frameBufferIndex];
-        frameBufferIndex = (frameBufferIndex + 1) % frameBufferSize;
+    while( frameBufferIndex != zi ) {
+        let previousFrame = frameBuffer[frameBufferIndex%frameBufferSize];
+        frameBufferIndex++;
 
-        let shapes = [
-            // 0, 0, 0, 0, 30, -18, -18, 27, 9, 
-            // Math.PI/2, 0, 0, 0, 30, -18, -18, 27, 9, 
-            // Math.PI, 0, 0, 0, 30, -18, -18, 27, 9, 
-            // 3*Math.PI/2, 0, 0, 0, 30, -18, -18, 27, 9,
-        ];
-        // add in bricks
-        let offset = Math.floor(frameBufferIndex / 4) % 4;
-        for( let i=0; i<16; i++ ) {
-            if( (frameBufferIndex + Z) % 4 ) {
-                shapes.push(
-                    Math.PI * i / 8, 0, 0, 0, 40, offset - 4, -13, 5, 4, 
-
-                )
+        let newLand;
+        newLand = [];
+        for( let i=0; i<land.length; i++ ) {
+            if( i % 20 > 1 ) {
+                newLand.push(2 + (frameBufferIndex % 30)/1000);
+            } else {
+                newLand.push(2 + 100/1000);
             }
-            /*
-            shapes.push(
-                0, 0, 0, 0, 50, offset - 12, -11, 5, 2, 
-                0, 0, 0, 0, 50, offset - 6, -11, 5, 2, 
-                0, 0, 0, 0, 50, offset, -11, 5, 2, 
-                0, 0, 0, 0, 50, offset + 6, -11, 5, 2, 
-                Math.PI/2, 0, 0, 0, 50, offset - 12, -11, 5, 2, 
-                Math.PI/2, 0, 0, 0, 50, offset - 6, -11, 5, 2, 
-                Math.PI/2, 0, 0, 0, 50, offset, -11, 5, 2, 
-                Math.PI/2, 0, 0, 0, 50, offset + 6, -11, 5, 2, 
-                Math.PI, 0, 0, 0, 50, offset - 12, -11, 5, 2, 
-                Math.PI, 0, 0, 0, 50, offset - 6, -11, 5, 2, 
-                Math.PI, 0, 0, 0, 50, offset, -11, 5, 2, 
-                Math.PI, 0, 0, 0, 50, offset + 6, -17, 5, 2,
-                3*Math.PI/2, 0, 0, 0, 50, offset - 12, -17, 5, 2, 
-                3*Math.PI/2, 0, 0, 0, 50, offset - 6, -17, 5, 2, 
-                3*Math.PI/2, 0, 0, 0, 50, offset, -17, 5, 2, 
-                3*Math.PI/2, 0, 0, 0, 50, offset + 6, -17, 5, 2, 
+        }
 
-            );
-            */
-        }
-        if( Math.random() < 0.1 ) {
-            shapes.push(
-                // rotation 
-                Math.floor(Math.random() * 4) * Math.PI/2,
-                // char
-                65 + Math.floor(Math.random() * 26),
-                // hue 
-                Math.random() * 360,
-                // saturation 
-                99,
-                // max lightness
-                80,
-                // x offset (unrotated)
-                0,
-                // y offset (unrotated) 
-                9
-            );
-        }
-        frameBuffer[frameBufferIndex] = {
-            tracks: previousFrame.tracks,
-            shapes: shapes,
-            cx: previousFrame.cx + Math.sin(1 / 10) * 10,
-            cy: previousFrame.cy
+        frameBuffer[frameBufferIndex%frameBufferSize] = {
+            land: newLand
         }
     }
     //frameBuffer[(zi+3)%frameBufferSize] = playerFrame;
@@ -131,61 +95,96 @@ window.onkeydown = (e: KeyboardEvent) => {
     c.fillStyle = '#000';
     c.fillRect(0, 0, a.width, a.height);
     // draw frames
-    let currentFrame = frameBuffer[Z];
-    let nextFrame = frameBuffer[(Z+1)%frameBufferSize];
+    let nextFrame = frameBuffer[(zi+1)%frameBufferSize];
+    let currentFrame = frameBuffer[zi%frameBufferSize];
     let fz = zi + frameBufferSize;
+
+    let l = landLength * x;
+    let li = Math.floor(l);
+    let currentDy = currentFrame.land[(li+1)%landLength] - currentFrame.land[li%landLength];
+    let currentFloorY = currentFrame.land[li%landLength] + currentDy * (l - li);
+    let nextDy = nextFrame.land[(li+1)%landLength] - nextFrame.land[li%landLength];
+    let nextFloorY = nextFrame.land[li%landLength] + nextDy * (l - li);
+    if( y && nextFloorY - y > .01 && nextFloorY - currentFloorY > .01 ) {
+        // dead, no request animation frame
+    } else {
+        requestAnimationFrame(f);
+        currentFloorY += .01;
+        if( currentFloorY >= y ) {
+            y = currentFloorY;
+            vy = 0;
+            targetRotation = Math.atan2(currentDy, Math.PI * currentFloorY * 2/landLength);    
+
+        } else {
+            vy -= diff * .0000005;
+        }
+    }
+    if( isNaN(targetRotation) ) {
+        console.log('fuck');
+    }
     let i;
     do {
         i = fz % frameBufferSize;
         let frame = frameBuffer[i];
         let dz = fz - z;
         fz--;
-        // we cheat by having the "eye distance" incorporated into the shape sizing (partially - also needs to match the default font size of 10)
-        let s = a.height/dz;
-        let shapes = frame.shapes;
-        let g = 0;
+        // most distant frame takes up the entire screen width, closer only shown partially
+        let s = a.width * frameBufferSize/dz;
+        let land = frame.land;
 
-        let dx = currentFrame.cx - frame.cx + (nextFrame.cx - currentFrame.cx)*dz/9;
-        let dy = currentFrame.cy - frame.cy + (nextFrame.cy - currentFrame.cy)*dz/9;
 
-        let _dx = dx * Math.cos(rotation) - dy * Math.sin(rotation);
-        let _dy = dy * Math.cos(rotation) + dx * Math.sin(rotation);
+        c.setTransform(
+            s, 
+            0, 
+            0, 
+            s, 
+            a.width/2, 
+            a.height/2
+        );
+        let sin = Math.sin(rotation);
+        let cos = Math.cos(rotation);
+        c.transform(
+            cos, 
+            sin, 
+            -sin, 
+            cos, 
+            0, 
+            0
+        );
+        c.transform(
+            1, 
+            0, 
+            0, 
+            1, 
+            -Math.cos(rotation) * vx * dz, 
+            y + Math.sin(rotation) * vx * dz
+        );
 
-        while( g < shapes.length ) {
-            let localRotation = shapes[g++];
-            let type = shapes[g++];
-            c.fillStyle = `hsl(${shapes[g++]}, ${shapes[g++]}%, ${shapes[g++] * Math.pow((frameBufferSize - dz)/100, 2)}%)`;
-            let sin = Math.sin(rotation + localRotation);
-            let cos = Math.cos(rotation + localRotation);
-        
-            c.setTransform(
-                s, 
-                0, 
-                0, 
-                s, 
-                a.width/2 + _dx, 
-                a.height/2 + _dy
-            );
-            c.transform(
-                // rotate combined player rotation and object rotation
-                cos, 
-                sin, 
-                -sin, 
-                cos, 
-                0, 
-                // player offset from center (y)
-                -4
-            );
-    
-            if( type ) {
-                c.fillText(String.fromCharCode(type), shapes[g++], shapes[g++]);
-            } else {
-                c.fillRect(shapes[g++], shapes[g++], shapes[g++], shapes[g++]);
-            }
-
+        //c.fillStyle = `hsl(0, 0%, 90%)`;
+        let g = landLength;
+        let color = -1;
+        c.fillStyle = `hsl(0, 0%, ${(frameBufferSize - dz)/frameBufferSize * (fz%4?100:30)}%)`;
+        c.beginPath();
+        while( g ) {
+            let l = land[--g];
+            let a = (g / landLength - x - .25) * Math.PI * 2;
+            let lx = Math.cos(a) * l;
+            let ly = Math.sin(a) * l;
+            c.lineTo(lx, ly);
         }
+        c.fill();
         
     } while(fz != zi)
 
-    requestAnimationFrame(f);
+    /*
+    c.textBaseline = 'middle';
+    c.textAlign = 'center';
+    c.setTransform(
+        0, 5, -10, 0, a.width/2, a.height*2/3
+    );
+    c.fillStyle = 'magenta';
+    c.fillText('X', 0, 0);
+    c.fillStyle = 'red';
+    c.fillText('X', 1, 0);
+    */
 }))();
